@@ -1,0 +1,1 @@
+A very simple LZ77-based data compression algorithm for Java with a 64k search window. The implementation is as simple and easy to understand as I can make it, and the performance is quite good.
