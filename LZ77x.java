@@ -16,18 +16,23 @@ public class LZ77x {
 		while( inputIdx < inputLen ) {
 			int matchOffset = 0, matchLength = 1;
 			// Indexed search. Requires 512k of memory.
-			if( inputIdx + 2 < inputLen ) {
-				int key = ( ( input[ inputIdx ] & 0xFF ) << 8 ) ^ ( ( input[ inputIdx + 1 ] & 0xFF ) << 4 ) ^ ( input[ inputIdx + 2 ] & 0xFF );
-				int searchIdx = index[ key ] - 1;
-				while( ( inputIdx - searchIdx ) < 65536 && searchIdx > 0 ) {
+			if( inputIdx + 3 < inputLen ) {
+				int key = ( input[ inputIdx ] & 0xFF ) * 33 + ( input[ inputIdx + 1 ] & 0xFF );
+				key = key * 33 + ( input[ inputIdx + 2 ] & 0xFF );
+				key = key * 33 + ( input[ inputIdx + 3 ] & 0xFF );
+				int searchIdx = index[ key & 0xFFFF ] - 1;
+				while( ( inputIdx - searchIdx ) < 65536 && searchIdx >= 0 ) {
 					if( inputIdx + matchLength < inputLen && input[ inputIdx + matchLength ] == input[ searchIdx + matchLength ] ) {
 						int len = 0;
-						while( inputIdx + len < inputLen && input[ searchIdx + len ] == input[ inputIdx + len ] ) {
+						while( inputIdx + len < inputLen && len < 127 && input[ searchIdx + len ] == input[ inputIdx + len ] ) {
 							len++;
 						}
 						if( len > matchLength ) {
 							matchOffset = inputIdx - searchIdx;
 							matchLength = len;
+							if( len >= 127 ) {
+								break;
+							}
 						}
 					}
 					searchIdx = chain[ searchIdx & 0xFFFF ] - 1;
@@ -35,14 +40,20 @@ public class LZ77x {
 				if( matchLength < 4 ) {
 					matchOffset = 0;
 					matchLength = 1;
-				} else if( matchLength > 127 ) {
-					matchLength = 127;
 				}
-				for( int idx = inputIdx, end = inputIdx + matchLength; idx < end; idx++ ) {
+				int idx = inputIdx;
+				int end = inputIdx + matchLength;
+				if( end + 3 > inputLen ) {
+					end = inputLen - 3;
+				}
+				while( idx < end ) {
 					// Update the index for each byte of the input to be encoded.
-					key = ( ( input[ idx ] & 0xFF ) << 8 ) ^ ( ( input[ idx + 1 ] & 0xFF ) << 4 ) ^ ( input[ idx + 2 ] & 0xFF );
-					chain[ idx & 0xFFFF ] = index[ key ];
-					index[ key ] = idx + 1;
+					key = ( input[ idx ] & 0xFF ) * 33 + ( input[ idx + 1 ] & 0xFF );
+					key = key * 33 + ( input[ idx + 2 ] & 0xFF );
+					key = key * 33 + ( input[ idx + 3 ] & 0xFF );
+					chain[ idx & 0xFFFF ] = index[ key & 0xFFFF ];
+					index[ key & 0xFFFF ] = idx + 1;
+					idx++;
 				}
 			}
 			/*
