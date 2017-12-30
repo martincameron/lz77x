@@ -31,7 +31,7 @@ int lz77x_enc( char *in, char *out, int count ) {
 				}
 			}
 		}
-		if( len > 2 || in_idx == count ) {
+		if( len > 3 || in_idx == count ) {
 			while( lit ) {
 				max = lit > 127 ? 127 : lit;
 				lit -= max;
@@ -46,7 +46,7 @@ int lz77x_enc( char *in, char *out, int count ) {
 				}
 			}
 		}
-		if( len > 2 ) {
+		if( len > 3 ) {
 			if( len > 127 ) {
 				len = 127;
 			}
