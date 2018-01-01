@@ -5,7 +5,7 @@
 #include "string.h"
 
 /*
-	A simple LZ77 implementation with a 64k search window. (c)2017 mumart@gmail.com
+	A simple LZ77 implementation with a 64k search window. (c)2018 mumart@gmail.com
 	The output consists of token bytes optionally followed by literals.
 		0xxxxxxx                   : Offset 0, length X.
 		1xxxxxxx yyyyyyyy yyyyyyyy : Offset Y, length X.
@@ -46,7 +46,7 @@ int lz77x_enc( char *in, char *out, int count ) {
 				}
 			}
 		}
-		if( len > 3 ) {
+		if( len > 2 && lit == 0 ) {
 			if( len > 127 ) {
 				len = 127;
 			}
