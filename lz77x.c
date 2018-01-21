@@ -19,54 +19,56 @@
 */
 int lz77x_enc( char *in, char *out, int count ) {
 	int in_idx = 0, out_idx = 0;
-	int len, off, max, lit = 0, hash[ 65536 ];
-	memset( hash, 0, sizeof( hash ) );
-	while( in_idx <= count ) {
-		len = 1;
-		if( in_idx + 2 < count ) {
-			off = in_idx - hash[ ( ( in[ in_idx ] & 0xFF ) << 8 ) | ( ( in[ in_idx + 1 ] & 0xFF ) ^ ( in[ in_idx + 2 ] & 0xFF ) ) ];
-			if( off > 0 && off < 65536 && in[ in_idx - off ] == in[ in_idx ] ) {
-				while( in_idx + len < count && in[ in_idx - off + len ] == in[ in_idx + len ] ) {
-					len++;
-				}
-			}
-		}
-		if( len > 3 || in_idx == count ) {
-			while( lit ) {
-				max = lit > 127 ? 127 : lit;
-				lit -= max;
-				if( out ) {
-					out[ out_idx++ ] = max;
-					while( max ) {
-						out[ out_idx++ ] = in[ in_idx - lit - max ];
-						max--;
-					}
-				} else {
-					out_idx += 1 + max;
-				}
-			}
-		}
-		if( len > 2 && lit == 0 ) {
-			if( len > 127 ) {
-				len = 127;
-			}
-			if( out ) {
-				out[ out_idx++ ] = 0x80 | len;
-				out[ out_idx++ ] = off >> 8;
-				out[ out_idx++ ] = off;
-			} else {
-				out_idx += 3;
-			}
-		} else {
-			lit += len;
-		}
-		while( len ) {
+	int len, off, max, lit = 0, *hash = calloc( 65536, sizeof( int ) );
+	if( hash ) {
+		while( in_idx <= count ) {
+			len = 1;
 			if( in_idx + 2 < count ) {
-				hash[ ( ( in[ in_idx ] & 0xFF ) << 8 ) | ( ( in[ in_idx + 1 ] & 0xFF ) ^ ( in[ in_idx + 2 ] & 0xFF ) ) ] = in_idx;
+				off = in_idx - hash[ ( ( in[ in_idx ] & 0xFF ) << 8 ) | ( ( in[ in_idx + 1 ] & 0xFF ) ^ ( in[ in_idx + 2 ] & 0xFF ) ) ];
+				if( off > 0 && off < 65536 && in[ in_idx - off ] == in[ in_idx ] ) {
+					while( in_idx + len < count && in[ in_idx - off + len ] == in[ in_idx + len ] ) {
+						len++;
+					}
+				}
 			}
-			in_idx++;
-			len--;
+			if( len > 3 || in_idx == count ) {
+				while( lit ) {
+					max = lit > 127 ? 127 : lit;
+					lit -= max;
+					if( out ) {
+						out[ out_idx++ ] = max;
+						while( max ) {
+							out[ out_idx++ ] = in[ in_idx - lit - max ];
+							max--;
+						}
+					} else {
+						out_idx += 1 + max;
+					}
+				}
+			}
+			if( len > 2 && lit == 0 ) {
+				if( len > 127 ) {
+					len = 127;
+				}
+				if( out ) {
+					out[ out_idx++ ] = 0x80 | len;
+					out[ out_idx++ ] = off >> 8;
+					out[ out_idx++ ] = off;
+				} else {
+					out_idx += 3;
+				}
+			} else {
+				lit += len;
+			}
+			while( len ) {
+				if( in_idx + 2 < count ) {
+					hash[ ( ( in[ in_idx ] & 0xFF ) << 8 ) | ( ( in[ in_idx + 1 ] & 0xFF ) ^ ( in[ in_idx + 2 ] & 0xFF ) ) ] = in_idx;
+				}
+				in_idx++;
+				len--;
+			}
 		}
+		free( hash );
 	}
 	return out_idx;
 }
@@ -164,7 +166,7 @@ int main( int argc, char **argv ) {
 			if( file && dec ) {
 				file_len = lz77x_load_file( argv[ 1 ], file );
 				enc_len = lz77x_enc( file, NULL, file_len );
-				enc = malloc( enc_len );
+				enc = enc_len ? malloc( enc_len ) : NULL;
 				if( enc ) {
 					enc_len = lz77x_enc( file, enc, file_len );
 					printf( "Compressed length: %d\n", enc_len );
@@ -189,7 +191,7 @@ int main( int argc, char **argv ) {
 			free( dec );
 		}
 	} else {
-		fprintf( stderr, "Lz77x test program.\n Usage: %s input_file\n", argv[ 0 ] );
+		fprintf( stderr, "Lz77x test program.\nUsage: %s input_file\n", argv[ 0 ] );
 	}
 	return result;
 }
