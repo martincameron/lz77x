@@ -151,47 +151,80 @@ int lz77x_save_file( char *file_name, char *buffer, int count ) {
 	if( length < count ) {
 		fprintf( stderr, "Unable to save file %s: %s\n", file_name, strerror( errno ) );
 	}
-	return count;
+	return length;
 }
 
 int main( int argc, char **argv ) {
-	int file_len, enc_len, result = EXIT_FAILURE;
-	char *file, *enc, *dec;
-	if( argc == 2 ) {
-		file_len = lz77x_load_file( argv[ 1 ], NULL );
-		if( file_len >= 0 ) {
-			printf( "File length: %d\n", file_len );
-			file = malloc( file_len );
-			dec = malloc( file_len );
-			if( file && dec ) {
-				file_len = lz77x_load_file( argv[ 1 ], file );
-				enc_len = lz77x_enc( file, NULL, file_len );
-				enc = enc_len ? malloc( enc_len ) : NULL;
-				if( enc ) {
-					enc_len = lz77x_enc( file, enc, file_len );
-					printf( "Compressed length: %d\n", enc_len );
-					if( lz77x_dec( enc, dec, enc_len ) == file_len ) {
-						if( memcmp( file, dec, file_len ) ) {
-							fputs( "Decoded data differs from original.\n", stderr );
-						} else {
-							puts( "Okay." );
-							result = EXIT_SUCCESS;
+	int arg, decode = 0, input_len, output_len, result = EXIT_FAILURE;
+	char *input_file = NULL, *output_file = NULL, *input, *enc, *dec;
+	for( arg = 1; arg < argc; arg++ ) {
+		/* Parse arguments.*/
+		if( strcmp( argv[ arg ], "-decode" ) == 0 ) {
+			decode = 1;
+		} else if( input_file ) {
+			output_file = argv[ arg ];
+		} else {
+			input_file = argv[ arg ];
+		}
+	}
+	if( input_file ) {
+		input_len = lz77x_load_file( input_file, NULL );
+		if( input_len >= 0 ) {
+			printf( "Input length: %d\n", input_len );
+			input = malloc( input_len );
+			if( input ) {
+				if( decode ) {
+					if( lz77x_load_file( input_file, input ) >= 0 ) {
+						output_len = lz77x_dec( input, NULL, input_len );
+						printf( "Decoded length: %d\n", output_len );
+						if( output_file ) {
+							dec = malloc( output_len );
+							if( dec ) {
+								lz77x_dec( input, dec, input_len );
+								lz77x_save_file( output_file, dec, output_len );
+								free( dec );
+							} else {
+								fputs( "Out of memory.\n", stderr );
+							}
 						}
-					} else {
-						fputs( "Decoded length differs from original.\n", stderr );
 					}
-					free( enc );
 				} else {
-					fputs( "Out of memory.\n", stderr );
+					dec = malloc( input_len );
+					if( dec ) {
+						if( lz77x_load_file( input_file, input ) >= 0 ) {
+							output_len = lz77x_enc( input, NULL, input_len );
+							printf( "Encoded length: %d\n", output_len );
+							enc = malloc( output_len );
+							if( enc ) {
+								lz77x_enc( input, enc, input_len );
+								if( lz77x_dec( enc, dec, output_len ) == input_len ) {
+									if( memcmp( input, dec, input_len ) ) {
+										fputs( "Decoded data differs from original.\n", stderr );
+									} else if( output_file ) {
+										lz77x_save_file( output_file, enc, output_len );
+									} else {
+										puts( "Compression test okay." );
+									}
+								} else {
+									fputs( "Decoded length differs from original.\n", stderr );
+								}
+								free( enc );
+							} else {
+								fputs( "Out of memory.\n", stderr );
+							}
+						}
+						free( dec );
+					} else {
+						fputs( "Out of memory.\n", stderr );
+					}
 				}
+				free( input );
 			} else {
 				fputs( "Out of memory.\n", stderr );
 			}
-			free( file );
-			free( dec );
 		}
 	} else {
-		fprintf( stderr, "Lz77x test program.\nUsage: %s input_file\n", argv[ 0 ] );
+		fprintf( stderr, "Lz77x test program.\nUsage: %s [-decode] input_file [output_file]\n", argv[ 0 ] );
 	}
 	return result;
 }
