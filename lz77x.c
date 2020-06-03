@@ -19,7 +19,7 @@
 */
 int lz77x_enc( char *in, char *out, int count ) {
 	int in_idx = 0, out_idx = 0;
-	int len, off, max, lit = 0, *hash = calloc( 65536, sizeof( int ) );
+	int len, off = 0, max, lit = 0, *hash = calloc( 65536, sizeof( int ) );
 	if( hash ) {
 		while( in_idx <= count ) {
 			len = 1;
